@@ -151,10 +151,13 @@ def fetch_prices_yfinance(period: str = "10y") -> Optional[pd.DataFrame]:
             return None
         out = {}
         for label, tk in YF_TICKERS.items():
-            try:
-                out[label] = raw[tk]["Close"]
-            except Exception:
-                continue
+           try:
+              col = raw[tk]["Close"]
+              if col.dropna().empty:
+                 continue
+              out[label] = col
+           except Exception:
+              continue
         if not out:
             return None
         df = pd.DataFrame(out).sort_index()
@@ -326,6 +329,7 @@ def load_gpr(force_refresh: bool = False) -> tuple[pd.DataFrame, str]:
 
 def load_all(force_refresh: bool = False) -> dict:
     prices, price_src = load_prices(force_refresh)
+    prices = prices.dropna(axis=1, how="all")
     gpr, gpr_src = load_gpr(force_refresh)
 
     if gpr is None:
