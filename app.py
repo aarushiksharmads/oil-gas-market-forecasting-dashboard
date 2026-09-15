@@ -138,12 +138,14 @@ def _delta(series: pd.Series, periods: int = 1) -> float:
 for col, label in zip((k1, k2, k3), commodity_opts):
     s = prices[label].dropna()
     u = "$/MMBtu" if label == "NatGas" else "$/bbl"
+    if s.empty:
+        col.metric(f"{label} ({u})", "N/A", "no data")
+        continue
     col.metric(
         f"{label} ({u})",
         f"{s.iloc[-1]:,.2f}",
         f"{_delta(s, 1):+.2f}% d/d",
     )
-
 k4.metric(
     "Geopolitical Risk (30d avg)",
     f"{snap['ma30']:.0f}",
@@ -213,19 +215,19 @@ with tab_overview:
     with c2:
         st.subheader("Trend & volatility snapshot")
         s = prices[target].dropna()
-        stats = {
-            "Spot": f"{s.iloc[-1]:,.2f} {unit}",
-            "1M change": f"{_delta(s, 21):+.2f}%",
-            "3M change": f"{_delta(s, 63):+.2f}%",
-            "1Y change": f"{_delta(s, 252):+.2f}%",
-            "Ann. volatility": f"{s.pct_change().std() * np.sqrt(252) * 100:.1f}%",
-            "52-wk high": f"{s.tail(252).max():,.2f}",
-            "52-wk low": f"{s.tail(252).min():,.2f}",
-        }
-        st.table(pd.DataFrame(stats.items(), columns=["Metric", "Value"]))
-        if "WTI" in prices and "Brent" in prices:
-            spread = (prices["Brent"] - prices["WTI"]).iloc[-1]
-            st.info(f"Brent–WTI spread: **{spread:+.2f} $/bbl**")
+        if s.empty:
+            st.warning(f"No data available for {target}.")
+        else:
+            stats = {
+                "Spot": f"{s.iloc[-1]:,.2f} {unit}",
+                "1M change": f"{_delta(s, 21):+.2f}%",
+                "3M change": f"{_delta(s, 63):+.2f}%",
+                "1Y change": f"{_delta(s, 252):+.2f}%",
+                "Ann. volatility": f"{s.pct_change().std() * np.sqrt(252) * 100:.1f}%",
+                "52-wk high": f"{s.tail(252).max():,.2f}",
+                "52-wk low": f"{s.tail(252).min():,.2f}",
+                }
+                st.table(pd.DataFrame(stats.items(), columns=["Metric", "Value"]))
 
 # =========================== GEOPOLITICAL RISK ============================= #
 with tab_geo:
