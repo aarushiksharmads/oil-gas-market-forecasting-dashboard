@@ -226,8 +226,8 @@ with tab_overview:
                 "Ann. volatility": f"{s.pct_change().std() * np.sqrt(252) * 100:.1f}%",
                 "52-wk high": f"{s.tail(252).max():,.2f}",
                 "52-wk low": f"{s.tail(252).min():,.2f}",
-                }
-                st.table(pd.DataFrame(stats.items(), columns=["Metric", "Value"]))
+            }
+            st.table(pd.DataFrame(stats.items(), columns=["Metric", "Value"]))
 
 # =========================== GEOPOLITICAL RISK ============================= #
 with tab_geo:
