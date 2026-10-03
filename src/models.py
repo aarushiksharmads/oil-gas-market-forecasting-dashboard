@@ -31,6 +31,10 @@ from .features import build_feature_frame
 # daily data; using the last ~12 years keeps models fast and current.
 MAX_HISTORY = 3000
 
+# The SARIMAX baseline only needs recent history; a shorter window keeps the
+# fit fast enough for a free-tier Streamlit deployment.
+SARIMAX_HISTORY = 750
+
 try:
     from xgboost import XGBRegressor
     _HAS_XGB = True
@@ -239,7 +243,7 @@ def sarimax_forecast(
     except Exception:
         return None
     try:
-        s = prices[target].iloc[-MAX_HISTORY:].astype(float).asfreq("B").ffill().dropna()
+        s = prices[target].iloc[-SARIMAX_HISTORY:].astype(float).asfreq("B").ffill().dropna()
         s = s.clip(lower=1e-3)  # guard log of non-positive
         # work in log space for positivity & stability
         ls = np.log(s)
@@ -247,7 +251,7 @@ def sarimax_forecast(
             ls, order=(2, 1, 2), trend="c",
             enforce_stationarity=False, enforce_invertibility=False,
         )
-        res = model.fit(disp=False)
+        res = model.fit(disp=False, maxiter=50)
         fc = res.get_forecast(steps=steps)
         mean = np.exp(fc.predicted_mean)
         ci = np.exp(fc.conf_int(alpha=0.05))
