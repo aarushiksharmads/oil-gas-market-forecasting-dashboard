@@ -154,6 +154,15 @@ def train_evaluate(
         "n_test": int(len(X_test)),
     }
 
+    # Naive random-walk baseline: "price in h days = price today".
+    # Only computed when the level feature exists (otherwise it would be
+    # meaningless).
+    if level_col in X_test:
+        naive = X_test[level_col].values
+        metrics["Naive_MAE"] = float(mean_absolute_error(y_test, naive))
+        metrics["Naive_RMSE"] = float(np.sqrt(mean_squared_error(y_test, naive)))
+        metrics["Naive_MAPE_%"] = _mape(y_test, naive)
+
     importance = pd.Series(dtype=float)
     if hasattr(model, "feature_importances_"):
         importance = pd.Series(model.feature_importances_, index=feat_names).sort_values(
