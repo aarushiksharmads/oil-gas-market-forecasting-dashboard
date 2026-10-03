@@ -381,6 +381,16 @@ with tab_ml:
         mc[3].metric("R²", f"{m['R2']:.3f}")
         mc[4].metric("Directional acc.", f"{m['DirAcc_%']:.1f}%")
 
+        if "Naive_MAPE_%" in m:
+            beats = m["MAPE_%"] < m["Naive_MAPE_%"]
+            st.caption(
+                f"Naive baseline (price in {horizon} days = today's price): "
+                f"MAE {m['Naive_MAE']:.2f} · RMSE {m['Naive_RMSE']:.2f} · "
+                f"MAPE {m['Naive_MAPE_%']:.2f}%. "
+                f"The {model_name} model {'beats' if beats else 'does not beat'} "
+                f"the baseline on MAPE."
+            )
+
         bt = go.Figure()
         bt.add_trace(go.Scatter(x=res.test_index, y=res.y_test.values,
                                 name="Actual", line=dict(color="#2ecc71")))
