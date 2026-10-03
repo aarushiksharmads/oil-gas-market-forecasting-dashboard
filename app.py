@@ -58,18 +58,18 @@ def load_bundle(force: bool = False) -> dict:
     return ds.load_all(force_refresh=force)
 
 
-@st.cache_data(ttl=60 * 60 * 3, show_spinner=False)
+@st.cache_data(ttl=60 * 60 * 3, show_spinner="Running back-test…")
 def cached_eval(prices, gpr, target, horizon, model_name):
     res = ml.train_evaluate(prices, gpr, target=target, horizon=horizon, model_name=model_name)
     return res
 
 
-@st.cache_data(ttl=60 * 60 * 3, show_spinner=False)
+@st.cache_data(ttl=60 * 60 * 3, show_spinner="Training forecast models (can take a minute)…")
 def cached_forecast(prices, gpr, target, model_name):
     return ml.forecast_path(prices, gpr, target=target, model_name=model_name)
 
 
-@st.cache_data(ttl=60 * 60 * 3, show_spinner=False)
+@st.cache_data(ttl=60 * 60 * 3, show_spinner="Fitting SARIMAX baseline…")
 def cached_sarimax(prices, target, steps):
     return ml.sarimax_forecast(prices, target=target, steps=steps)
 
@@ -111,7 +111,7 @@ st.sidebar.markdown(f"Prices: `{bundle['prices_source']}`")
 st.sidebar.markdown(f"Geopolitical: `{bundle['gpr_source']}`")
 st.sidebar.caption(
     "Sources: FRED (St. Louis Fed), Yahoo Finance, Caldara & Iacoviello GPR "
-    "Index (Federal Reserve Board), U.S. EIA."
+    "Index (Federal Reserve Board). U.S. EIA is supported optionally via API key."
 )
 
 
@@ -218,12 +218,15 @@ with tab_overview:
         if s.empty:
             st.warning(f"No data available for {target}.")
         else:
+            # Volatility on the last year only: the full history includes the
+            # April 2020 negative-price day, which inflates the figure.
+            last_year = s.tail(253)
             stats = {
                 "Spot": f"{s.iloc[-1]:,.2f} {unit}",
                 "1M change": f"{_delta(s, 21):+.2f}%",
                 "3M change": f"{_delta(s, 63):+.2f}%",
                 "1Y change": f"{_delta(s, 252):+.2f}%",
-                "Ann. volatility": f"{s.pct_change().std() * np.sqrt(252) * 100:.1f}%",
+                "Ann. volatility (1Y)": f"{last_year.pct_change().std() * np.sqrt(252) * 100:.1f}%",
                 "52-wk high": f"{s.tail(252).max():,.2f}",
                 "52-wk low": f"{s.tail(252).min():,.2f}",
             }
@@ -412,17 +415,15 @@ with tab_ml:
 
 # ============================ DATA & SOURCES =============================== #
 with tab_data:
-    st.subheader("Verified data sources")
+    st.subheader("Data sources")
     st.markdown(
         """
 | # | Source | What it provides | Access | Link |
 |---|--------|------------------|--------|------|
 | 1 | **FRED — Federal Reserve Bank of St. Louis** | WTI (`DCOILWTICO`), Brent (`DCOILBRENTEU`), Henry Hub gas (`DHHNGSP`) spot prices | Public, no key | https://fred.stlouisfed.org/ |
-| 2 | **Yahoo Finance** (`yfinance`) | WTI/Brent/NatGas futures, XLE & USO energy funds | Public | https://finance.yahoo.com/ |
+| 2 | **Yahoo Finance** (`yfinance`) | WTI/Brent/NatGas futures, XLE & USO energy funds (fallback when FRED is unavailable) | Public | https://finance.yahoo.com/ |
 | 3 | **Geopolitical Risk (GPR) Index** — Caldara & Iacoviello, Federal Reserve Board | Daily geopolitical-risk index + threat/act components | Public | https://www.matteoiacoviello.com/gpr.htm |
-| 4 | **U.S. Energy Information Administration (EIA) API v2** | Official production, inventories, refinery & price data | Free API key | https://www.eia.gov/opendata/ |
-| 5 | **World Bank Commodity Markets ("Pink Sheet")** | Monthly global commodity price benchmarks | Public | https://www.worldbank.org/en/research/commodity-markets |
-| 6 | **OPEC Monthly Oil Market Report** | Supply/demand balances, OPEC+ policy | Public | https://www.opec.org/ |
+| 4 | **U.S. Energy Information Administration (EIA) API v2** | Optional: production, inventories, refinery & price data (requires a free API key) | Free API key | https://www.eia.gov/opendata/ |
         """
     )
     st.markdown(
